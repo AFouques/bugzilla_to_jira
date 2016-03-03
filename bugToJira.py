@@ -12,19 +12,19 @@ JIRA_LABEL = 'From_Bugzilla'
 # Functions!
 
 # Get a value from the user
-def get_value(question, is_mandatory = False, default_value = '', is_password = False ):
+def get_value(question, is_mandatory=False, default_value='', is_password=False):
     value = ''
     is_value_ok = False
-    while (not is_value_ok):
-        if (is_password):
+    while not is_value_ok:
+        if is_password:
             value = getpass.getpass(question)
         else:
             value = input(question)
         
-        if (value == '' and default_value != ''):
+        if value == '' and default_value != '':
             value = default_value
         
-        if (value == '' and is_mandatory):
+        if value == '' and is_mandatory:
             print("This value is mandatory, again...")
         else:
             is_value_ok = True
@@ -35,28 +35,28 @@ def get_value(question, is_mandatory = False, default_value = '', is_password = 
 print("\nWelcome to this awesome script which will migrate your bugzilla tickets to your JIRA instance. please give us all your personnal informations.\n")
 
 # Get Bugzilla DB info and connect
-mysql_host = get_value("MySQL host [localhost]: ", default_value = 'localhost')
-mysql_user = get_value("MySQL user [root]: ", default_value = 'root')
-mysql_password = get_value("MySQL password [root]: ", default_value = 'root', is_password = True)
-mysql_database = get_value("MySQL database table [bugzilla]: ", default_value = 'bugzilla')
+mysql_host = get_value("MySQL host [localhost]: ", default_value='localhost')
+mysql_user = get_value("MySQL user [root]: ", default_value='root')
+mysql_password = get_value("MySQL password [root]: ", default_value='root', is_password=True)
+mysql_database = get_value("MySQL database table [bugzilla]: ", default_value='bugzilla')
 
 print("\nConnecting to your MySQL database...")
 mysql_conn = mysql.connector.connect(host=mysql_host, user=mysql_user,password=mysql_password, database=mysql_database)
 print("Connected.\n")
 
 # Get JIRA info and connect
-jira_username = get_value("JIRA username: ", is_mandatory = True)
-jira_password = get_value("JIRA password: ", is_mandatory = True, is_password = True)
-jira_instance = get_value("JIRA instance: https://[yourJiraInstance].atlassian.net: ", is_mandatory = True)
+jira_username = get_value("JIRA username: ", is_mandatory=True)
+jira_password = get_value("JIRA password: ", is_mandatory=True, is_password=True)
+jira_instance = get_value("JIRA instance: https://[yourJiraInstance].atlassian.net: ", is_mandatory=True)
 jira_project = get_value("JIRA project [TEST]: ", default_value = 'TEST')
 
 print("\nConnecting to your JIRA instance...")
-jira_options = { 'server': 'https://' + jira_instance + '.atlassian.net' }
+jira_options = {'server': 'https://' + jira_instance + '.atlassian.net'}
 jira = JIRA(jira_options, basic_auth=(jira_username, jira_password))
 print("Connected.\n")
 
 # Get Zendesk instance to create cool links
-zendesk_instance = get_value("Zendesk instance: https://[yourZendeskInstance].zendesk.com: ", is_mandatory = True)
+zendesk_instance = get_value("Zendesk instance: https://[yourZendeskInstance].zendesk.com: ", is_mandatory=True)
 
 # Load bugs from bugzilla
 print("\nLoading bugs...")
@@ -137,9 +137,9 @@ for row_bug in rows_bugs:
                         '[Zendesk ticket]: https://' + zendesk_instance + '.zendesk.com/agent/tickets/' + row_bug[13] + '\n' + \
                         '[Description]:\n' + DESCRIPTION_KEY
     issue_priority = row_bug[6].replace("Normal", "Medium").replace("---", "Medium")
-    issue_dict = {'project':jira_project, 'summary': issue_summary, 'description': issue_description, 'priority': {'name': issue_priority}, "labels": [JIRA_LABEL] }
+    issue_dict = {'project':jira_project, 'summary': issue_summary, 'description': issue_description, 'priority': {'name': issue_priority}, "labels": [JIRA_LABEL]}
     issue_type = 'Story'
-    if (row_bug[11] in ['Ticket', 'Problem']):
+    if row_bug[11] in ['Ticket', 'Problem']:
         issue_type = 'Bug'
         issue_severity = row_bug[1].replace("---", "normal").replace("-", " ")
         issue_status = row_bug[2].replace("---", "TO_CHECK").replace("-", " ").replace("_", " ").capitalize()
@@ -156,13 +156,13 @@ bug_id_android_versions_dict = {}
 # Loop on android versions table to fill the dict
 for row_android_version in rows_android_version:
     value = bug_id_android_versions_dict.get(row_android_version[0])
-    if (value == None):
+    if value == None:
         bug_id_android_versions_dict.update({row_android_version[0]: row_android_version[1]})
     else:
         bug_id_android_versions_dict.update({row_android_version[0]: value + ", " + row_android_version[1]})
 # Loop on each jira issue
 for bug in bug_id_jira_issue_dict:
-    if (bug not in bug_id_android_versions_dict):
+    if bug not in bug_id_android_versions_dict:
         continue
     # Get the description from bug_id_jira_id_dict and update the android version with the one stored in bug_id_android_versions_dict
     issue = bug_id_jira_issue_dict.get(bug)
@@ -176,7 +176,7 @@ for bug in bug_id_jira_issue_dict:
 print("\nAdding attachements to JIRA issues...\n")
 # Loop on attachement table
 for row_attachement in rows_attachements:
-    if (row_attachement[0] not in bug_id_jira_issue_dict):
+    if row_attachement[0] not in bug_id_jira_issue_dict:
         continue
     issue = bug_id_jira_issue_dict.get(row_attachement[0])
     filename = row_attachement[1]
@@ -201,11 +201,11 @@ print("\nAdding comments to JIRA issues...\n")
 issues_with_description = []
 # Loop on comments table
 for row_comments in rows_comments:
-    if (row_comments[0] not in bug_id_jira_issue_dict or row_comments[3] == ''):
+    if row_comments[0] not in bug_id_jira_issue_dict or row_comments[3] == '':
         continue
     issue = bug_id_jira_issue_dict.get(row_comments[0])
     long_comment = str(row_comments[2]) + ", by " + row_comments[1] + ":\n" + row_comments[3]
-    if (issue.key not in issues_with_description):
+    if issue.key not in issues_with_description:
         # Get the description from bug_id_jira_id_dict and update the description with the one stored in row_comments
         description = issue.fields.description
         description = description.replace(DESCRIPTION_KEY, long_comment)
