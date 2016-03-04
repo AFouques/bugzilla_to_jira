@@ -5,6 +5,20 @@ Python script to migrate your Bugzilla ticket to Jira
 
 Clone the repo, or download the raw bugToJira.py
 
+Install JIRA python library
+```$ sudo pip install jira```
+
+Install MySQL python library:
+
+- For Fedora:
+```
+$ sudo yum install mysql-connector-python
+```
+- For Ubuntu
+```
+$ sudo apt-get install python-mysqldb
+```
+
 ### Usage
 
 Run: ```$ ./bugToJira.py```
