@@ -11,8 +11,8 @@ JIRA_LABEL = 'From_Bugzilla'
 
 # Functions!
 
-# Get a value from the user
 def get_value(question, is_mandatory=False, default_value='', is_password=False):
+    """Get a value from the user"""
     value = ''
     is_value_ok = False
     while not is_value_ok:
