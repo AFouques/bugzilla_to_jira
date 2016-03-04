@@ -96,14 +96,14 @@ SELECT av.bug_id, av.value
 FROM bug_cf_android_version av""")
 rows_android_version = cursor_android_version.fetchall()
 
-print("Loading attachements...")
-cursor_attachements = mysql_conn.cursor()
-cursor_attachements.execute("""
+print("Loading attachments...")
+cursor_attachments = mysql_conn.cursor()
+cursor_attachments.execute("""
 SELECT a.bug_id, a.filename, a.description, d.thedata
 FROM attachments a, attach_data d
 WHERE a.attach_id = d.id
 ORDER BY a.bug_id""")
-rows_attachements = cursor_attachements.fetchall()
+rows_attachments = cursor_attachments.fetchall()
 
 print("Loading comments...")
 cursor_comments = mysql_conn.cursor()
@@ -118,10 +118,10 @@ print("\nDisconnecting from your MySQL database...")
 mysql_conn.close()
 print("Disconnected.\n")
 
-# We will store a dict with bugzilla {bug id: jira issue} to, then, add android versions, comments and attachements
+# We will store a dict with bugzilla {bug id: jira issue} to, then, add android versions, comments and attachments
 bug_id_jira_issue_dict = {}
 
-# Create JIRA issues from bugs (without comments, attachements and Android versions)
+# Create JIRA issues from bugs (without comments, attachments and Android versions)
 print("Creating JIRA issue for each bug...\n")
 for row_bug in rows_bugs:
     print("Loading bug {0} : {1}".format(row_bug[0], row_bug[4]))
@@ -172,28 +172,28 @@ for bug in bug_id_jira_issue_dict:
     bug_id_jira_issue_dict.get(bug).update(description= description)
     print("Updated JIRA issue https://" + jira_instance + ".atlassian.net/browse/" + issue.key + "")
 
-# Add Attachements to issues
-print("\nAdding attachements to JIRA issues...\n")
-# Loop on attachement table
-for row_attachement in rows_attachements:
-    if row_attachement[0] not in bug_id_jira_issue_dict:
+# Add Attachments to issues
+print("\nAdding attachments to JIRA issues...\n")
+# Loop on attachment table
+for row_attachment in rows_attachments:
+    if row_attachment[0] not in bug_id_jira_issue_dict:
         continue
-    issue = bug_id_jira_issue_dict.get(row_attachement[0])
-    filename = row_attachement[1]
-    description = row_attachement[2]
-    file = open('./' + filename, 'wb')
-    file.write(row_attachement[3])
-    file.close()
+    issue = bug_id_jira_issue_dict.get(row_attachment[0])
+    filename = row_attachment[1]
+    description = row_attachment[2]
+    attachment_file = open('./' + filename, 'wb')
+    attachment_file.write(row_attachment[3])
+    attachment_file.close()
     # Reopen the file in 'rb' as JIRA really want that
-    file = open('./' + filename, 'rb')
-    # Add attachement to jira
-    jira.add_attachment(issue, file, filename)
-    file.close()
+    attachment_file = open('./' + filename, 'rb')
+    # Add attachment to jira
+    jira.add_attachment(issue, attachment_file, filename)
+    attachment_file.close()
     os.remove('./' + filename)
     comment = "Add an attached file : [^" + filename + "]\n\n" + description
-    # Add a comment in jira issue with a description of the attachement
+    # Add a comment in jira issue with a description of the attachment
     jira.add_comment(issue, comment)
-    print("Added attachement " + filename + " to issue https://" + jira_instance + ".atlassian.net/browse/" + issue.key)
+    print("Added attachment " + filename + " to issue https://" + jira_instance + ".atlassian.net/browse/" + issue.key)
 
 # Add comments to issues
 print("\nAdding comments to JIRA issues...\n")

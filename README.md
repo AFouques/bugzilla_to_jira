@@ -49,9 +49,9 @@ This script has been created for our company instances of bugzilla an JIRA so so
 # Get Zendesk instance to create cool links
 
 # Load bugs from bugzilla
-# We will store a dict with bugzilla {bug id: jira issue} to, then, add android versions, comments and attachements
+# We will store a dict with bugzilla {bug id: jira issue} to, then, add android versions, comments and attachments
 
-# Create JIRA issues from bugs (without comments, attachements and Android versions)
+# Create JIRA issues from bugs (without comments, attachments and Android versions)
 
 # Add Android versions for each issues
 # Create a dict with bug_id | android versions
@@ -60,11 +60,11 @@ This script has been created for our company instances of bugzilla an JIRA so so
     # Get the description from bug_id_jira_id_dict and update the android version with the one stored in bug_id_android_versions_dict
     # push the result on jira
 
-# Add Attachements to issues
-# Loop on attachement table
+# Add attachments to issues
+# Loop on attachment table
     # Reopen the file in 'rb' as JIRA really want that
-    # Add attachement to jira
-    # Add a comment in jira issue with a description of the attachement
+    # Add attachment to jira
+    # Add a comment in jira issue with a description of the attachment
 
 # Add comments to issues
 # Create an array to list the issue who already have a description, as the first bugzilla comment will be the JIRA description
