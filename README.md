@@ -14,7 +14,7 @@ Install MySQL python library:
 ```
 $ sudo yum install mysql-connector-python
 ```
-- For Ubuntu
+- For Ubuntu:
 ```
 $ sudo apt-get install python-mysqldb
 ```
