@@ -49,6 +49,9 @@ This script has been created for our company instances of bugzilla an JIRA so so
 # Get Zendesk instance to create cool links
 
 # Load bugs from bugzilla
+# Load android versions
+# Load attachments
+# Load comments
 # We will store a dict with bugzilla {bug id: jira issue} to, then, add android versions, comments and attachments
 
 # Create JIRA issues from bugs (without comments, attachments and Android versions)

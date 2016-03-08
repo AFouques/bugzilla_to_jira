@@ -90,10 +90,12 @@ cursor_bugs.execute("""
     AND b.resolution IN ('')
     AND b.product_id = p.id
     AND b.component_id = c.id
+    AND p.name NOT IN ('Genymotion web site')
 
     ORDER BY b.bug_id""")
 rows_bugs = cursor_bugs.fetchall()
 
+# Load android versions
 print("Loading android versions...")
 cursor_android_version = mysql_conn.cursor()
 cursor_android_version.execute("""
@@ -101,21 +103,34 @@ cursor_android_version.execute("""
     FROM bug_cf_android_version av""")
 rows_android_version = cursor_android_version.fetchall()
 
+# Load attachments
 print("Loading attachments...")
 cursor_attachments = mysql_conn.cursor()
 cursor_attachments.execute("""
     SELECT a.bug_id, a.filename, a.description, d.thedata
-    FROM attachments a, attach_data d
-    WHERE a.attach_id = d.id
+    FROM bugs b, products p, attachments a, attach_data d
+    WHERE b.bug_id = a.bug_id
+        AND a.attach_id = d.id
+        AND b.product_id = p.id
+        AND b.bug_status NOT IN ('RELEASED', 'CLOSED')
+        AND b.resolution IN ('')
+        AND p.name NOT IN ('Genymotion web site')
     ORDER BY a.bug_id""")
 rows_attachments = cursor_attachments.fetchall()
 
+# Load comments
 print("Loading comments...")
 cursor_comments = mysql_conn.cursor()
 cursor_comments.execute("""
     SELECT c.bug_id, w.login_name, c.bug_when, c.thetext
-    FROM longdescs c, profiles w
-    WHERE c.who = w.userid
+    FROM bugs b, products p, longdescs c, profiles w
+    WHERE b.bug_id = c.bug_id
+        AND c.who = w.userid
+        AND b.product_id = p.id
+        AND b.bug_status NOT IN ('RELEASED', 'CLOSED')
+        AND b.resolution IN ('')
+        AND c.thetext NOT IN ('')
+        AND p.name NOT IN ('Genymotion web site')
     ORDER BY c.comment_id""")
 rows_comments = cursor_comments.fetchall()
 
@@ -153,9 +168,9 @@ for row_bug in rows_bugs:
     if row_bug[11] in ['Ticket', 'Problem']:
         issue_type = 'Bug'
         issue_severity = row_bug[1].replace("---", "normal").replace("-", " ")
-        issue_status = row_bug[2].replace("---", "TO_CHECK")
-                                 .replace("-", " ")
-                                 .replace("_", " ")
+        issue_status = row_bug[2].replace("---", "TO_CHECK") \
+                                 .replace("-", " ") \
+                                 .replace("_", " ") \
                                  .capitalize()
         issue_dict.update({'customfield_10600': {'value': issue_severity},
                            'customfield_10601': {'value': issue_status}})
@@ -186,7 +201,7 @@ for bug in bug_id_jira_issue_dict:
     description = issue.fields.description
     description = description.replace(ANDROID_VERSION_KEY, bug_id_android_versions_dict.get(bug))
     # push the result on jira
-    bug_id_jira_issue_dict.get(bug).update(description= description)
+    issue.update(description= description)
     print("Updated JIRA issue https://" + jira_instance + ".atlassian.net/browse/" + issue.key + "")
 
 # Add Attachments to issues
@@ -199,7 +214,7 @@ for row_attachment in rows_attachments:
     filename = row_attachment[1]
     description = row_attachment[2]
     attachment_file = open('./' + filename, 'wb')
-    attachment_file.write(row_attachment[3]) you
+    attachment_file.write(row_attachment[3])
     attachment_file.close()
     # Reopen the file in 'rb' as JIRA really want that
     attachment_file = open('./' + filename, 'rb')
@@ -220,7 +235,7 @@ print("\nAdding comments to JIRA issues...\n")
 issues_with_description = []
 # Loop on comments table
 for row_comments in rows_comments:
-    if row_comments[0] not in bug_id_jira_issue_dict or row_comments[3] == '':
+    if row_comments[0] not in bug_id_jira_issue_dict:
         continue
     issue = bug_id_jira_issue_dict.get(row_comments[0])
     long_comment = str(row_comments[2]) + ", by " + row_comments[1] + ":\n" + row_comments[3]
