@@ -27,7 +27,7 @@ No argument needed, everything will be prompt
 
 ### Real usage for your needs
 
-This script has been created for our company instances of bugzilla an JIRA so some part must be changed when you use it:
+This script has been created for our company instances of bugzilla and JIRA so some part must be changed when you use it:
 - We use our zendesk instance name to keep our zendesk links in our jira issues
 - The tables requested might change if you created personnal bugzilla fields.
 - The elements of the description might change for the same reason
