@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/env python3
 
 import getpass
 import os
@@ -56,7 +56,7 @@ jira_instance = get_value("JIRA instance: https://[yourJiraInstance].atlassian.n
 jira_project = get_value("JIRA project [TEST]: ", default_value = 'TEST')
 
 print("\nConnecting to your JIRA instance...")
-jira_options = {'server': 'https://' + jira_instance + '.atlassian.net'}
+jira_options = {'server': 'https://{}.atlassian.net'.format(jira_instance)}
 jira = JIRA(jira_options, basic_auth=(jira_username, jira_password))
 print("Connected.\n")
 
@@ -199,18 +199,18 @@ bug_id_jira_issue_dict = {}
 print("Creating JIRA issue for each bug...\n")
 for row_bug in rows_bugs:
     print("Loading bug {0} : {1}".format(row_bug[0], row_bug[4]))
-    issue_summary = '[BZ' + str(row_bug[0]) + '] ' + row_bug[4]
-    issue_description = '[CREATED]: ' + str(row_bug[3]) + '\n' + \
-                        '[Operating system]: ' + row_bug[5] + '\n' + \
-                        '[Product]: ' + row_bug[7] + '\n' + \
-                        '[Platform]: ' + row_bug[8] + '\n' + \
-                        '[Version]: ' + row_bug[9] + '\n' + \
-                        '[Android Version]: ' + ANDROID_VERSION_KEY + '\n' + \
-                        '[Component ID]: ' + row_bug[10] + '\n' + \
-                        '[Affected users]: ' + row_bug[12] + ' ' + DUPLICATES_USERS_KEY + '\n' + \
-                        '[Zendesk ticket]: https://' + zendesk_instance + \
-                            '.zendesk.com/agent/tickets/' + row_bug[13] + '\n' + \
-                        '[Description]:\n' + DESCRIPTION_KEY
+    issue_summary = '[BZ{0[0]}] {0[4]}'.format(row_bug)
+    issue_description = """[CREATED]: {0[3]}
+[Operating system]: {0[5]}
+[Product]: {0[7]}
+[Platform]: {0[8]}
+[Version]: {0[9]}
+[Android Version]: {1}
+[Component ID]: {0[10]}
+[Affected users]: {0[12]} {2}
+[Zendesk ticket]: https://{3}.zendesk.com/agent/tickets/{0[13]}
+[Description]:
+{4}""".format(row_bug, ANDROID_VERSION_KEY, DUPLICATES_USERS_KEY, zendesk_instance, DESCRIPTION_KEY)
     issue_priority = row_bug[6].replace("Normal", "Medium").replace("---", "Medium")
     issue_dict = {'project':jira_project,
                   'summary': issue_summary,
@@ -227,11 +227,11 @@ for row_bug in rows_bugs:
                                  .capitalize()
         issue_dict.update({'customfield_10600': {'value': issue_severity},
                            'customfield_10601': {'value': issue_status}})
-    issue_dict.update({'issuetype': {'name': issue_type}})
+    issue_dict['issuetype'] = {'name': issue_type}
     new_issue = jira.create_issue(fields=issue_dict)
-    bug_id_jira_issue_dict.update({row_bug[0]: new_issue})
-    print("Created JIRA issue https://" + jira_instance + \
-          ".atlassian.net/browse/" + new_issue.key + "\n")
+    bug_id_jira_issue_dict[row_bug[0]] = new_issue
+    print("Created JIRA issue https://{}.atlassian.net/browse/{}\n" \
+          .format(jira_instance, new_issue.key))
 
 # Add Android versions for each issues
 print("Adding Android versions to JIRA issues...")
@@ -240,10 +240,10 @@ bug_id_android_versions_dict = {}
 # Loop on android versions table to fill the dict
 for row_android_version in rows_android_version:
     value = bug_id_android_versions_dict.get(row_android_version[0])
-    if value == None:
-        bug_id_android_versions_dict.update({row_android_version[0]: row_android_version[1]})
+    if value is None:
+        bug_id_android_versions_dict[row_android_version[0]] = row_android_version[1]
     else:
-        bug_id_android_versions_dict.update({row_android_version[0]: value + ", " + row_android_version[1]})
+        bug_id_android_versions_dict[row_android_version[0]] = value + ", " + row_android_version[1]
 # Loop on each jira issue
 for bug in bug_id_jira_issue_dict:
     if bug not in bug_id_android_versions_dict:
@@ -255,7 +255,7 @@ for bug in bug_id_jira_issue_dict:
     description = description.replace(ANDROID_VERSION_KEY, bug_id_android_versions_dict.get(bug))
     # push the result on jira
     issue.update(description= description)
-    print("Updated JIRA issue https://" + jira_instance + ".atlassian.net/browse/" + issue.key + "")
+    print("Updated JIRA issue https://{}.atlassian.net/browse/{}".format(jira_instance, issue.key))
 
 # Add Attachments to issues
 print("\nAdding attachments to JIRA issues...\n")
@@ -275,11 +275,11 @@ for row_attachment in rows_attachments:
     jira.add_attachment(issue, attachment_file, filename)
     attachment_file.close()
     os.remove('./' + filename)
-    comment = "Add an attached file : [^" + filename + "]\n\n" + description
+    comment = "Add an attached file : [^{}]\n\n{}".format(filename, description)
     # Add a comment in jira issue with a description of the attachment
     jira.add_comment(issue, comment)
-    print("Added attachment " + filename + " to issue https://" + \
-           jira_instance + ".atlassian.net/browse/" + issue.key)
+    print("Added attachment {} to issue https://{}.atlassian.net/browse/{}" \
+          .format(filename, jira_instance, issue.key))
 
 # Add comments to issues
 print("\nAdding comments to JIRA issues...\n")
@@ -291,7 +291,7 @@ for row_comments in rows_comments:
     if row_comments[0] not in bug_id_jira_issue_dict:
         continue
     issue = bug_id_jira_issue_dict.get(row_comments[0])
-    long_comment = str(row_comments[2]) + ", by " + row_comments[1] + ":\n" + row_comments[3]
+    long_comment = "{0}, by {1[1]}:\n{1[3]}".format(str(row_comments[2]), row_comments)
     if issue.key not in issues_with_description:
         # Get the description from bug_id_jira_id_dict and update the
         # description with the one stored in row_comments
@@ -299,14 +299,14 @@ for row_comments in rows_comments:
         description = description.replace(DESCRIPTION_KEY, long_comment)
         # Push the result on jira
         issue.update(description= description)
-        print("Updated JIRA issue description https://" + jira_instance + \
-              ".atlassian.net/browse/" + issue.key + "")
+        print("Updated JIRA issue description https://{}.atlassian.net/browse/{}" \
+              .format(jira_instance, issue.key))
         issues_with_description.append(issue.key)
     else:
         # Add the comment as... comment in the issue
         jira.add_comment(issue, long_comment)
-        print("Added comment to issue https://" + jira_instance + \
-              ".atlassian.net/browse/" + issue.key)
+        print("Added comment to issue https://{}.atlassian.net/browse/{}" \
+              .format(jira_instance, issue.key))
 
 # Add users from duplicates for each issues
 print("\nAdding Users from duplicates to JIRA issues...\n")
