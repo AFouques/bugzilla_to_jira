@@ -174,9 +174,9 @@ for row_bug in rows_bugs:
                                  .capitalize()
         issue_dict.update({'customfield_10600': {'value': issue_severity},
                            'customfield_10601': {'value': issue_status}})
-    issue_dict.update({'issuetype': {'name': issue_type}})
+    issue_dict['issuetype'] = {'name': issue_type}
     new_issue = jira.create_issue(fields=issue_dict)
-    bug_id_jira_issue_dict.update({row_bug[0]: new_issue})
+    bug_id_jira_issue_dict[row_bug[0]] = new_issue
     print("Created JIRA issue https://" + jira_instance + \
           ".atlassian.net/browse/" + new_issue.key + "\n")
 
@@ -187,10 +187,10 @@ bug_id_android_versions_dict = {}
 # Loop on android versions table to fill the dict
 for row_android_version in rows_android_version:
     value = bug_id_android_versions_dict.get(row_android_version[0])
-    if value == None:
-        bug_id_android_versions_dict.update({row_android_version[0]: row_android_version[1]})
+    if value is None:
+        bug_id_android_versions_dict[row_android_version[0]] = row_android_version[1]
     else:
-        bug_id_android_versions_dict.update({row_android_version[0]: value + ", " + row_android_version[1]})
+        bug_id_android_versions_dict[row_android_version[0]] = value + ", " + row_android_version[1]
 # Loop on each jira issue
 for bug in bug_id_jira_issue_dict:
     if bug not in bug_id_android_versions_dict:
