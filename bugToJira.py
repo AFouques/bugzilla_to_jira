@@ -321,7 +321,8 @@ for row_dup_users in rows_dup_users:
     description = description.replace(DUPLICATES_USERS_KEY, row_dup_users[1])
     # push the result on jira
     issue.update(description= description)
-    print("Updated JIRA issue https://" + jira_instance + ".atlassian.net/browse/" + issue.key + "")
+    print("Updated JIRA issue https://{}.atlassian.net/browse/{}" \
+          .format(jira_instance, issue.key))
 
 # Add Attachments from duplicates to issues
 print("\nAdding attachments from duplicates to JIRA issues...\n")
@@ -341,11 +342,11 @@ for row_dup_attachment in rows_dup_attachments:
     jira.add_attachment(issue, attachment_file, filename)
     attachment_file.close()
     os.remove('./' + filename)
-    comment = "Add an attached file : [^" + filename + "]\n\n" + description
+    comment = "Add an attached file : [^{}]\n\n{}".format(filename, description)
     # Add a comment in jira issue with a description of the attachment
     jira.add_comment(issue, comment)
-    print("Added attachment " + filename + " to issue https://" + \
-           jira_instance + ".atlassian.net/browse/" + issue.key)
+    print("Added attachment {} to issue https://{}.atlassian.net/browse/{}" \
+          .format(filename, jira_instance, issue.key))
 
 # Add comments from duplicates to issues
 print("\nAdding comments from duplicates to JIRA issues...\n")
@@ -354,12 +355,11 @@ for row_dup_comments in rows_dup_comments:
     if row_dup_comments[0] not in row_dup_comments:
         continue
     issue = bug_id_jira_issue_dict.get(row_dup_comments[0])
-    long_comment = str(row_dup_comments[2]) + ", by " + row_dup_comments[1] + \
-                   ":\n" + row_dup_comments[3]
+    long_comment = "{0}, by {1[1]}:\n{1[3]}".format(str(row_dup_comments[2]), row_dup_comments)
     # Add the comment as... comment in the issue
     jira.add_comment(issue, long_comment)
-    print("Added comment to issue https://" + jira_instance + \
-          ".atlassian.net/browse/" + issue.key)
+    print("Added comment to issue https://{}.atlassian.net/browse/{}" \
+          .format(jira_instance, issue.key))
 
 # Clean Description to remove unwanted Description, Android version and Duplicates users keys
 print("\nClean the description of all JIRA issues...\n")
@@ -370,6 +370,7 @@ for issue in bug_id_jira_issue_dict.values():
                              .replace(DUPLICATES_USERS_KEY, "")
     # push the result on jira
     issue.update(description= description)
-    print("Cleaned JIRA issue https://" + jira_instance + ".atlassian.net/browse/" + issue.key + "")
+    print("Cleaned JIRA issue https://{}.atlassian.net/browse/{}" \
+          .format(jira_instance, issue.key))
 
 print("\nThat's all folks, keep the vibe and stay true!\nCmoaToto\n")
