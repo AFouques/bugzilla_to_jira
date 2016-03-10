@@ -7,6 +7,7 @@ import mysql.connector
 
 ANDROID_VERSION_KEY = '[ANDROID_VERSION_KEY]'
 DESCRIPTION_KEY = '[DESCRIPTION_KEY]'
+DUPLICATES_USERS_KEY = '[DUPLICATES_USERS_KEY]'
 JIRA_LABEL = 'From_Bugzilla'
 
 # Functions!
@@ -134,6 +135,58 @@ cursor_comments.execute("""
     ORDER BY c.comment_id""")
 rows_comments = cursor_comments.fetchall()
 
+# Load listusers from duplicates
+print("Loading users from duplicates...")
+cursor_dup_users = mysql_conn.cursor()
+cursor_dup_users.execute("""
+    SELECT b.bug_id original, d.cf_listusers
+    FROM bugs d, bugs b, duplicates dup, products p
+    WHERE b.bug_id = dup.dupe_of
+        AND d.bug_id = dup.dupe
+        AND b.product_id = p.id
+        AND b.bug_status NOT IN ('RELEASED', 'CLOSED')
+        AND b.resolution IN ('')
+        AND p.name NOT IN ('Genymotion web site')
+    ORDER BY b.bug_id""")
+rows_dup_users = cursor_dup_users.fetchall()
+
+# Load attachments from duplicates
+print("Loading attachments from duplicates...")
+cursor_dup_attachments = mysql_conn.cursor()
+cursor_dup_attachments.execute("""
+    SELECT b.bug_id original, a.filename, a.description, attach.thedata
+    FROM bugs d, bugs b, duplicates dup, products p, attachments a, attach_data attach
+    WHERE b.bug_id = dup.dupe_of
+        AND d.bug_id = dup.dupe
+        AND b.product_id = p.id
+        AND a.bug_id = d.bug_id
+        AND a.attach_id = attach.id
+        AND b.bug_status NOT IN ('RELEASED', 'CLOSED')
+        AND b.resolution IN ('')
+        AND p.name NOT IN ('Genymotion web site')
+    ORDER BY b.bug_id""")
+rows_dup_attachments = cursor_dup_attachments.fetchall()
+
+# Load comments from duplicates
+print("Loading comments from duplicates...")
+cursor_dup_comments = mysql_conn.cursor()
+cursor_dup_comments.execute("""
+    SELECT b.bug_id original, w.login_name, c.bug_when, c.thetext
+    FROM bugs d, bugs b, duplicates dup, longdescs c, profiles w, products p
+    WHERE
+        c.bug_id = d.bug_id
+        AND b.bug_id = dup.dupe_of
+        AND d.bug_id = dup.dupe
+        AND c.who = w.userid
+        AND b.product_id = p.id
+        AND b.bug_status NOT IN ('RELEASED', 'CLOSED')
+        AND b.resolution IN ('')
+        AND c.thetext NOT IN ('')
+        AND c.thetext NOT LIKE 'Duplicate%'
+        AND p.name NOT IN ('Genymotion web site')
+    ORDER BY c.comment_id""")
+rows_dup_comments = cursor_dup_comments.fetchall()
+
 print("\nDisconnecting from your MySQL database...")
 mysql_conn.close()
 print("Disconnected.\n")
@@ -154,10 +207,10 @@ for row_bug in rows_bugs:
 [Version]: {0[9]}
 [Android Version]: {1}
 [Component ID]: {0[10]}
-[Affected users]: {0[12]}
-[Zendesk ticket]: https://{2}.zendesk.com/agent/tickets/{0[13]}
+[Affected users]: {0[12]} {2}
+[Zendesk ticket]: https://{3}.zendesk.com/agent/tickets/{0[13]}
 [Description]:
-{3}""".format(row_bug, ANDROID_VERSION_KEY, zendesk_instance, DESCRIPTION_KEY)
+{4}""".format(row_bug, ANDROID_VERSION_KEY, DUPLICATES_USERS_KEY, zendesk_instance, DESCRIPTION_KEY)
     issue_priority = row_bug[6].replace("Normal", "Medium").replace("---", "Medium")
     issue_dict = {'project':jira_project,
                   'summary': issue_summary,
@@ -254,5 +307,70 @@ for row_comments in rows_comments:
         jira.add_comment(issue, long_comment)
         print("Added comment to issue https://{}.atlassian.net/browse/{}" \
               .format(jira_instance, issue.key))
+
+# Add users from duplicates for each issues
+print("\nAdding Users from duplicates to JIRA issues...\n")
+# Loop on duplicates users table to fill the jira issues
+for row_dup_users in rows_dup_users:
+    if row_dup_users[0] not in bug_id_jira_issue_dict:
+        continue
+    # Get the description from bug_id_jira_id_dict and update the list of
+    # users with the one stored in row_dup_users
+    issue = bug_id_jira_issue_dict.get(row_dup_users[0])
+    description = issue.fields.description
+    description = description.replace(DUPLICATES_USERS_KEY, row_dup_users[1])
+    # push the result on jira
+    issue.update(description= description)
+    print("Updated JIRA issue https://{}.atlassian.net/browse/{}" \
+          .format(jira_instance, issue.key))
+
+# Add Attachments from duplicates to issues
+print("\nAdding attachments from duplicates to JIRA issues...\n")
+# Loop on duplicates attachments table
+for row_dup_attachment in rows_dup_attachments:
+    if row_dup_attachment[0] not in bug_id_jira_issue_dict:
+        continue
+    issue = bug_id_jira_issue_dict.get(row_dup_attachment[0])
+    filename = row_dup_attachment[1]
+    description = row_dup_attachment[2]
+    attachment_file = open('./' + filename, 'wb')
+    attachment_file.write(row_dup_attachment[3])
+    attachment_file.close()
+    # Reopen the file in 'rb' as JIRA really want that
+    attachment_file = open('./' + filename, 'rb')
+    # Add attachment to jira
+    jira.add_attachment(issue, attachment_file, filename)
+    attachment_file.close()
+    os.remove('./' + filename)
+    comment = "Add an attached file : [^{}]\n\n{}".format(filename, description)
+    # Add a comment in jira issue with a description of the attachment
+    jira.add_comment(issue, comment)
+    print("Added attachment {} to issue https://{}.atlassian.net/browse/{}" \
+          .format(filename, jira_instance, issue.key))
+
+# Add comments from duplicates to issues
+print("\nAdding comments from duplicates to JIRA issues...\n")
+# Loop on comments from duplicates table
+for row_dup_comments in rows_dup_comments:
+    if row_dup_comments[0] not in row_dup_comments:
+        continue
+    issue = bug_id_jira_issue_dict.get(row_dup_comments[0])
+    long_comment = "{0}, by {1[1]}:\n{1[3]}".format(str(row_dup_comments[2]), row_dup_comments)
+    # Add the comment as... comment in the issue
+    jira.add_comment(issue, long_comment)
+    print("Added comment to issue https://{}.atlassian.net/browse/{}" \
+          .format(jira_instance, issue.key))
+
+# Clean Description to remove unwanted Description, Android version and Duplicates users keys
+print("\nClean the description of all JIRA issues...\n")
+for issue in bug_id_jira_issue_dict.values():
+    description = issue.fields.description
+    description = description.replace(DESCRIPTION_KEY, "") \
+                             .replace(ANDROID_VERSION_KEY, "") \
+                             .replace(DUPLICATES_USERS_KEY, "")
+    # push the result on jira
+    issue.update(description= description)
+    print("Cleaned JIRA issue https://{}.atlassian.net/browse/{}" \
+          .format(jira_instance, issue.key))
 
 print("\nThat's all folks, keep the vibe and stay true!\nCmoaToto\n")

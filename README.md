@@ -52,6 +52,9 @@ This script has been created for our company instances of bugzilla and JIRA so s
 # Load android versions
 # Load attachments
 # Load comments
+# Load listusers from duplicates
+# Load attachments from duplicates
+# Load comments from duplicates
 # We will store a dict with bugzilla {bug id: jira issue} to, then, add android versions, comments and attachments
 
 # Create JIRA issues from bugs (without comments, attachments and Android versions)
@@ -77,4 +80,21 @@ This script has been created for our company instances of bugzilla and JIRA so s
         # Push the result on jira
     # Else
         # Add the comment as... comment in the issue
+
+# Add users from duplicates for each issues
+    # Get the description from bug_id_jira_id_dict and update the list of users with the one stored in row_dup_users
+    # push the result on jira
+
+# Add Attachments from duplicates to issues
+# Loop on duplicates attachments table
+    # Reopen the file in 'rb' as JIRA really want that
+    # Add attachment to jira
+    # Add a comment in jira issue with a description of the attachment
+
+# Add comments from duplicates to issues
+# Loop on comments from duplicates table
+    # Add the comment as... comment in the issue
+
+# Clean Description to remove unwanted Description, Android version and Duplicates users keys
+    # push the result on jira
 ```
